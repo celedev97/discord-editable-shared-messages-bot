@@ -3,7 +3,6 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 const { clientId, guildId, token } = require('./config.json');
 
-//#region register commands
 const commandsName = {
 	avatar: "avatar",
 
@@ -45,17 +44,17 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName(commandsName.listRemove)
 		.setDescription('Remove item from a list')
-		.addIntegerOption(option => {
+		/*.addIntegerOption(option => {
 			option.setName(paramsName.listNumber)
 				.setDescription('The number of the item to remove')
 				.setRequired(true)
-		}),
+		})*/,
 
 
 	new SlashCommandBuilder()
 		.setName(commandsName.listEdit)
 		.setDescription('Remove item from a list')
-		.addIntegerOption(option => {
+		/*.addIntegerOption(option => {
 			option.setName(paramsName.listNumber)
 				.setDescription('The number of the item to edit')
 				.setRequired(true)
@@ -64,13 +63,13 @@ const commands = [
 			option.setName(paramsName.listContent)
 				.setDescription('The new content of the element to edit')
 				.setRequired(true)
-		}),
+		})*/,
 
 
 	new SlashCommandBuilder()
 		.setName(commandsName.listInsert)
 		.setDescription('Insert an item into a list at a given position')
-		.addIntegerOption(option => {
+		/*.addIntegerOption(option => {
 			option.setName(paramsName.listNumber)
 				.setDescription('The number of the item to insert')
 				.setRequired(true)
@@ -79,12 +78,11 @@ const commands = [
 			option.setName(paramsName.listContent)
 				.setDescription('The new content of the element to insert')
 				.setRequired(true)
-		}),
+		})*/,
 
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '9' }).setToken(token);
-
 (async () => {
 	try {
 		await rest.put(
@@ -97,4 +95,3 @@ const rest = new REST({ version: '9' }).setToken(token);
 		console.error(error);
 	}
 })();
-//#endregion

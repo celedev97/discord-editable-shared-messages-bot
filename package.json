@@ -7,8 +7,8 @@
     "start": "npx tsc && node src/deploy-commands.js && node src/index.js"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Celeste Capece",
+  "license": "MIT",
   "dependencies": {
     "@discordjs/builders": "^0.6.0",
     "@discordjs/rest": "^0.1.0-canary.0",

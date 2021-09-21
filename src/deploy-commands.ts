@@ -87,10 +87,12 @@ const rest = new REST({ version: '9' }).setToken(token);
 	try {
 		console.log("Deploying commands...")
 		await rest.put(
-			/** SNIPPET TO REGISTER THE COMMANDS FOR ALL THE SERVERS
+			//REGISTER THE COMMANDS FOR ALL THE SERVERS
 			Routes.applicationCommands(clientId),
-			*/
-			Routes.applicationGuildCommands(clientId, guildId),
+
+			//only register them for the test server
+			//Routes.applicationGuildCommands(clientId, guildId),
+
 			{ body: commands },
 		);
 

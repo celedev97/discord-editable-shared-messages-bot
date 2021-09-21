@@ -1,5 +1,6 @@
 node_modules
 .env
+.idea
 src/config.json
 src/*.js
 src/*.js.map

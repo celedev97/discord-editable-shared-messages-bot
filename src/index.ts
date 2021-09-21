@@ -1,76 +1,152 @@
-import {Interaction, Message, Client, Intents, Channel, TextBasedChannels, CommandInteraction} from "discord.js";
+import {
+	Interaction,
+	Message,
+	Client,
+	Intents,
+	Channel,
+	TextBasedChannels,
+	CommandInteraction,
+	MessageReaction, PartialMessageReaction, CollectorFilter, Collection
+} from "discord.js";
 const { clientId, guildId, token, } = require('./config.json');
 
-const {paramsName, commandsName} = require("./deploy-commands");
+import {paramsName, commandsName} from "./deploy-commands"
+import helpers from "./helpers"
 
 const client = new Client({
 	intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS],
 	partials: ['MESSAGE', 'CHANNEL', 'REACTION']
 });
 
-async function manageCommand(interaction: Interaction){
-	if (!interaction.isCommand()) return;
-	switch (interaction.commandName) {
-		case commandsName.avatar:
-			return interaction.reply(client.user.displayAvatarURL({dynamic: true}));
+function replyToListFilterGenerator(interaction: Interaction) : CollectorFilter<[Message]>{
+	return async response => {
+		if (response.content != ".") return false;
+		if (response.author.id !== interaction.user.id) return false;
+		if (response.reference == null) return false;
 
-		case commandsName.createMessage:
-			return await interaction.reply("uwu");
-		case commandsName.createList:
-			return await interaction.reply(interaction.options.getString('name')+":");
+		const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
+		const originalMessage = await channel.messages.fetch(response.reference.messageId);
 
-		case commandsName.listRemove:
-			console.log("remove")
-			return new Promise<void>(() => {return})
+		if (originalMessage.author.id !== client.user.id) return false;
 
-		case commandsName.listInsert:
-			return new Promise<void>(() => {return})
-
-		case commandsName.listEdit:
-			return new Promise<void>(() => {return})
-
+		return originalMessage.interaction?.commandName == commandsName.createList;
 	}
 }
 
-async function manageReply(replyMessage: Message){
-	if(replyMessage.type !== "REPLY") return;
 
-	client.channels.fetch(replyMessage.reference.channelId).then( channel => {
-		(channel as TextBasedChannels).messages.fetch(replyMessage.reference.messageId).then( originalMessage => {
-			//checking if the stuff it's a list
-			if(originalMessage.interaction.type != "APPLICATION_COMMAND" || originalMessage.interaction.commandName != "editable-list"){
-				//this is not a list
-				originalMessage.edit(replyMessage.content);
-			}else{
-				//removing list numbers
-				const searchRegExp = /^`\d*` -/gm;
-				const listContent = originalMessage.content.replace(searchRegExp, '');
-
-				//adding the new element
-				const lines = listContent.split("\n");
-				lines.push(replyMessage.content);
-
-				//putting numbers back
-				const digitCount = lines.length.toString().length
-				for (let i = 1; i < lines.length; i++) {
-					lines[i] = '`'+ zerofill(i, digitCount)+'` -'+lines[i]
-				}
-
-				originalMessage.edit(lines.join("\n"));
-			}
-			replyMessage.delete()
+function listSelection(interaction: CommandInteraction) {
+	return interaction.channel.awaitMessages({ filter: replyToListFilterGenerator(interaction), max: 1, time: 10000, errors: ['time'] })
+		.catch( reason => {
+			interaction.editReply('No list selected, try again');
 		})
-	})
 }
+
+async function manageCommand(interaction: Interaction): Promise<void>{
+	if (!interaction.isCommand()) return;
+	const output = interaction.deferReply();
+	await output;
+
+	switch (interaction.commandName) {
+		case commandsName.avatar:
+			await interaction.editReply(client.user.displayAvatarURL({dynamic: true}));
+			break;
+
+		case commandsName.createMessage:
+			await interaction.editReply("uwu");
+			break;
+
+		case commandsName.createList:
+			await interaction.editReply(interaction.options.getString('name')+":");
+			break;
+
+		case commandsName.listRemove:
+			await interaction.editReply("Reply to the list you want to edit writing `.`")
+			await listSelection(interaction).then( async collected => {
+					const response = (collected as Collection<string, Message>).first()
+					const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
+					const originalMessage = await channel.messages.fetch(response.reference.messageId);
+
+					const lines = helpers.messageToArray(originalMessage.content);
+					lines.splice(interaction.options.getInteger(paramsName.listNumber), 1);
+
+					await originalMessage.edit(helpers.arrayToMessage(lines))
+					await response.delete()
+					await interaction.deleteReply()
+				})
+			break;
+
+		case commandsName.listInsert:
+			await interaction.editReply("Reply to the list you want to edit writing `.`")
+			await listSelection(interaction).then( async collected => {
+				const response = (collected as Collection<string, Message>).first()
+				const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
+				const originalMessage = await channel.messages.fetch(response.reference.messageId);
+
+				const lines = helpers.messageToArray(originalMessage.content);
+				lines.splice(interaction.options.getInteger(paramsName.listNumber), 0,
+					interaction.options.getString(paramsName.listContent));
+
+				await originalMessage.edit(helpers.arrayToMessage(lines))
+				await response.delete()
+				await interaction.deleteReply()
+			})
+			break;
+
+		case commandsName.listEdit:
+			await interaction.editReply("Reply to the list you want to edit writing `.`")
+			await listSelection(interaction).then( async collected => {
+				const response = (collected as Collection<string, Message>).first()
+				const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
+				const originalMessage = await channel.messages.fetch(response.reference.messageId);
+
+				const lines = helpers.messageToArray(originalMessage.content);
+				lines[interaction.options.getInteger(paramsName.listNumber)] = interaction.options.getString(paramsName.listContent);
+
+				await originalMessage.edit(helpers.arrayToMessage(lines))
+				await response.delete()
+				await interaction.deleteReply()
+			})
+			break;
+
+	}
+
+	return output
+}
+
+async function manageReply(replyMessage: Message){
+	//#region preparations
+	if(replyMessage.type !== "REPLY" || replyMessage.author.id == client.user.id) return;
+
+	//getting the original referred message
+	const channel = await client.channels.fetch(replyMessage.reference.channelId) as TextBasedChannels;
+	const originalMessage = await channel.messages.fetch(replyMessage.reference.messageId);
+
+	if (originalMessage.author.id != client.user.id) return;
+	//#endregion
+
+	//checking the message type and reacting
+	if(originalMessage.interaction?.commandName == commandsName.createMessage){
+		await originalMessage.edit(replyMessage.content);
+	}else if(originalMessage.interaction?.commandName == commandsName.createList){
+		if(replyMessage.content == ".") return;
+
+		//cleaning list
+		const lines = helpers.messageToArray(originalMessage.content)
+
+		//adding new item
+		lines.push(replyMessage.content);
+
+		const newMessageContent = helpers.arrayToMessage(lines)
+		await originalMessage.edit(newMessageContent);
+	}else{
+		await replyMessage.reply("Cannot do anything since the referred message isn't an editable message or a list")
+		return
+	}
+	await replyMessage.delete()
+}
+
 
 //#region Events hooking
-
-
-function zerofill(number, length) {
-	const zeros = length - number.toString().length;
-	if(zeros<1) return number;
-	return "0".repeat(zeros) + number;
-}
 
 client.once('ready', () => {
 	console.log('Ready!');

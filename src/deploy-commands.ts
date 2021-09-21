@@ -3,7 +3,7 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 const { clientId, guildId, token } = require('./config.json');
 
-const commandsName = {
+export const commandsName = {
 	avatar: "avatar",
 
 	createMessage: "create-message",
@@ -14,7 +14,7 @@ const commandsName = {
 	listInsert: "list-insert",
 }
 
-const paramsName = {
+export const paramsName = {
 	createListName : "name",
 	listNumber: "number",
 	listContent: "content",
@@ -85,6 +85,7 @@ const commands = [
 const rest = new REST({ version: '9' }).setToken(token);
 (async () => {
 	try {
+		console.log("Deploying commands...")
 		await rest.put(
 			/** SNIPPET TO REGISTER THE COMMANDS FOR ALL THE SERVERS
 			Routes.applicationCommands(clientId),

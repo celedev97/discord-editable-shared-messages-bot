@@ -60,7 +60,7 @@ async function getList(interaction: CommandInteraction): Promise<Message | undef
 }
 
 function listSelection(interaction: CommandInteraction) {
-	return interaction.channel.awaitMessages({ filter: replyToListFilterGenerator(interaction), max: 1, time: 10000, errors: ['time'] })
+	return interaction.channel.awaitMessages({ filter: replyToListFilterGenerator(interaction), max: 1, time: 25000, errors: ['time'] })
 		.catch( reason => {
 			interaction.editReply('No list selected, try again');
 		})

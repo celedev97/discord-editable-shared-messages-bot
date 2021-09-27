@@ -33,6 +33,31 @@ function replyToListFilterGenerator(interaction: Interaction) : CollectorFilter<
 	}
 }
 
+async function getList(interaction: CommandInteraction): Promise<Message | undefined> {
+	const select = interaction.options.getBoolean(paramsName.selectList, false);
+	let list: Message | undefined = undefined;
+
+	if (select !== true) {
+		const channel = await interaction.channel.fetch() as TextBasedChannels;
+		const messages = await channel.messages.fetch()
+		list = messages.filter(msg =>
+			msg.author == client.user && msg.interaction?.commandName == commandsName.createList
+		).first()
+	}
+
+	if (list == undefined){
+		await interaction.editReply("Reply to the list you want to edit writing `.`")
+		await listSelection(interaction).then(async collected => {
+			const response = (collected as Collection<string, Message>).first()
+			const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
+			list = await channel.messages.fetch(response.reference.messageId);
+			await response.delete()
+		})
+	}
+
+
+	return list
+}
 
 function listSelection(interaction: CommandInteraction) {
 	return interaction.channel.awaitMessages({ filter: replyToListFilterGenerator(interaction), max: 1, time: 10000, errors: ['time'] })
@@ -60,54 +85,41 @@ async function manageCommand(interaction: Interaction): Promise<void>{
 			break;
 
 		case commandsName.listRemove:
-			await interaction.editReply("Reply to the list you want to edit writing `.`")
-			await listSelection(interaction).then( async collected => {
-					const response = (collected as Collection<string, Message>).first()
-					const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
-					const originalMessage = await channel.messages.fetch(response.reference.messageId);
+			const listToRemove: Message | undefined = await getList(interaction);
 
-					const lines = helpers.messageToArray(originalMessage.content);
-					lines.splice(interaction.options.getInteger(paramsName.listNumber), 1);
+			if(listToRemove != undefined){
+				const lines = helpers.messageToArray(listToRemove.content);
+				lines.splice(interaction.options.getInteger(paramsName.listNumber), 1);
 
-					await originalMessage.edit(helpers.arrayToMessage(lines))
-					await response.delete()
-					await interaction.deleteReply()
-				})
+				await listToRemove.edit(helpers.arrayToMessage(lines))
+				await interaction.deleteReply()
+			}
 			break;
 
 		case commandsName.listInsert:
-			await interaction.editReply("Reply to the list you want to edit writing `.`")
-			await listSelection(interaction).then( async collected => {
-				const response = (collected as Collection<string, Message>).first()
-				const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
-				const originalMessage = await channel.messages.fetch(response.reference.messageId);
+			const listToInsert: Message | undefined = await getList(interaction);
 
-				const lines = helpers.messageToArray(originalMessage.content);
+			if(listToInsert != undefined){
+				const lines = helpers.messageToArray(listToInsert.content);
 				lines.splice(interaction.options.getInteger(paramsName.listNumber), 0,
 					interaction.options.getString(paramsName.listContent));
 
-				await originalMessage.edit(helpers.arrayToMessage(lines))
-				await response.delete()
+				await listToInsert.edit(helpers.arrayToMessage(lines))
 				await interaction.deleteReply()
-			})
+			}
 			break;
 
 		case commandsName.listEdit:
-			await interaction.editReply("Reply to the list you want to edit writing `.`")
-			await listSelection(interaction).then( async collected => {
-				const response = (collected as Collection<string, Message>).first()
-				const channel = await client.channels.fetch(response.reference.channelId) as TextBasedChannels;
-				const originalMessage = await channel.messages.fetch(response.reference.messageId);
+			const listToEdit: Message | undefined = await getList(interaction);
 
-				const lines = helpers.messageToArray(originalMessage.content);
+			if(listToEdit != undefined){
+				const lines = helpers.messageToArray(listToEdit.content);
 				lines[interaction.options.getInteger(paramsName.listNumber)] = interaction.options.getString(paramsName.listContent);
 
-				await originalMessage.edit(helpers.arrayToMessage(lines))
-				await response.delete()
+				await listToEdit.edit(helpers.arrayToMessage(lines))
 				await interaction.deleteReply()
-			})
+			}
 			break;
-
 	}
 
 	return output

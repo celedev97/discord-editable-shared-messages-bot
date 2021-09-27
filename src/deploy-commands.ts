@@ -18,6 +18,7 @@ export const paramsName = {
 	createListName : "name",
 	listNumber: "number",
 	listContent: "content",
+	selectList: "select-list"
 }
 
 const commands = [
@@ -48,7 +49,12 @@ const commands = [
 			option.setName(paramsName.listNumber)
 				.setDescription('The number of the item to remove')
 				.setRequired(true)
-		),
+		).addBooleanOption( option =>
+			option.setName(paramsName.selectList)
+				.setDescription('true if you want to manually select the list, false if you want the last list to be selected')
+				.setRequired(false)
+		)
+	,
 
 
 	new SlashCommandBuilder()
@@ -63,7 +69,12 @@ const commands = [
 			option.setName(paramsName.listContent)
 				.setDescription('The new content of the element to edit')
 				.setRequired(true)
-		),
+		).addBooleanOption( option =>
+			option.setName(paramsName.selectList)
+				.setDescription('true if you want to manually select the list, false if you want the last list to be selected')
+				.setRequired(false)
+		)
+	,
 
 
 	new SlashCommandBuilder()
@@ -78,6 +89,10 @@ const commands = [
 			option.setName(paramsName.listContent)
 				.setDescription('The new content of the element to insert')
 				.setRequired(true)
+		).addBooleanOption( option =>
+			option.setName(paramsName.selectList)
+				.setDescription('true if you want to manually select the list, false if you want the last list to be selected')
+				.setRequired(false)
 		),
 
 ].map(command => command.toJSON());

@@ -120,6 +120,18 @@ async function manageCommand(interaction: Interaction): Promise<void>{
 				await interaction.deleteReply()
 			}
 			break;
+
+		case commandsName.listAdd:
+			const listToAdd: Message | undefined = await getList(interaction);
+
+			if(listToAdd != undefined) {
+				const lines = helpers.messageToArray(listToAdd.content);
+				lines.push(interaction.options.getString(paramsName.listContent));
+
+				await listToAdd.edit(helpers.arrayToMessage(lines))
+				await interaction.deleteReply()
+			}
+			break;
 	}
 
 	return output

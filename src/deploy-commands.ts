@@ -9,6 +9,7 @@ export const commandsName = {
 	createMessage: "create-message",
 	createList: "create-list",
 
+	listAdd: "list-add",
 	listRemove: "list-remove",
 	listEdit: "list-edit",
 	listInsert: "list-insert",
@@ -94,6 +95,20 @@ const commands = [
 				.setDescription('true if you want to manually select the list, false if you want the last list to be selected')
 				.setRequired(false)
 		),
+
+	new SlashCommandBuilder()
+		.setName(commandsName.listAdd)
+		.setDescription('Add item to a list')
+		.addStringOption(option =>
+			option.setName(paramsName.listContent)
+				.setDescription('The new content of the element to add')
+				.setRequired(true)
+		).addBooleanOption( option =>
+		option.setName(paramsName.selectList)
+			.setDescription('true if you want to manually select the list, false if you want the last list to be selected')
+			.setRequired(false)
+	)
+	,
 
 ].map(command => command.toJSON());
 

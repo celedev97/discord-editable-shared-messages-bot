@@ -6,7 +6,7 @@ import {
 	Channel,
 	TextBasedChannels,
 	CommandInteraction,
-	MessageReaction, PartialMessageReaction, CollectorFilter, Collection
+	MessageReaction, PartialMessageReaction, CollectorFilter, Collection, BaseGuildTextChannel, TextChannel
 } from "discord.js";
 const { clientId, guildId, token, } = require('./config.json');
 
@@ -145,9 +145,42 @@ async function manageReply(replyMessage: Message){
 	const channel = await client.channels.fetch(replyMessage.reference.channelId) as TextBasedChannels;
 	const originalMessage = await channel.messages.fetch(replyMessage.reference.messageId);
 
-	if (originalMessage.author.id != client.user.id) return;
-	//#endregion
+	if(replyMessage.mentions.has(client.user)){
+		await manageTag(replyMessage, originalMessage)
+	}else if(originalMessage.author.id == client.user.id){
+	 	await manageReplyToCommand(replyMessage, originalMessage)
+	}
+}
 
+
+async function manageTag(replyMessage: Message, originalMessage: Message) {
+	let channels = await (replyMessage.channel as BaseGuildTextChannel).guild.channels.fetch();
+	let pinsChannel = (channels.filter( channel => channel.name.includes("pins")).first() as TextChannel);
+
+	//creating the pin
+	let pin = await pinsChannel.send(
+		{
+			content: originalMessage.url + "\nFrom:<@"+originalMessage.author.id+">\n" + originalMessage.content,
+			files: originalMessage.attachments.map( attachment => attachment.url)
+		}
+	);
+	originalMessage = await originalMessage.fetch(true)
+	originalMessage.reactions.cache.each(async reaction => {
+		await pin.react(reaction.emoji)
+		console.log(reaction)
+	})
+	
+
+	//linking the pin for 5 seconds
+	let botReply = await replyMessage.reply(pin.url)
+	setTimeout(async function(){ 
+		await botReply.delete();
+		await replyMessage.delete();
+	 }, 5000); //time in milliseconds
+}
+
+async function manageReplyToCommand(replyMessage: Message, originalMessage: Message) {
+	
 	//checking the message type and reacting
 	if(originalMessage.interaction?.commandName == commandsName.createMessage){
 		await originalMessage.edit(replyMessage.content);

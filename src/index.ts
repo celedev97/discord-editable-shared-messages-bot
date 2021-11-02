@@ -167,7 +167,6 @@ async function manageTag(replyMessage: Message, originalMessage: Message) {
 	originalMessage = await originalMessage.fetch(true)
 	originalMessage.reactions.cache.each(async reaction => {
 		await pin.react(reaction.emoji)
-		console.log(reaction)
 	})
 	
 
